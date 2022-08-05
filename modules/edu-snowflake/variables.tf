@@ -1,0 +1,10 @@
+variable databases {}
+variable schemas {}
+variable tables_template {}
+variable tables_change_version {}
+variable file_formats {}
+variable warehouses {}
+variable roles {}
+variable users {}
+variable grants_objects {}
+variable grants_roles {}
