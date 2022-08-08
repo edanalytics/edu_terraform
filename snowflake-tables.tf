@@ -5,12 +5,14 @@
 # Example... for full syntax/documentation see
 # https://registry.terraform.io/providers/Snowflake-Labs/snowflake/latest/docs/resources/table
 
-# resource snowflake_table tables {
+# Add (and uncomment) a block like this for each table you want to manage with Terraform:
+
+# resource snowflake_table some_table {
 #   database   = "some_database"
 #   schema     = "some_schema"
 #   name       = "some_table"
 #   depends_on = [ snowflake_database.databases, snowflake_schema.schemas ]
-
+# 
 #   column {
 #       name = "column1"
 #       type = "string"
