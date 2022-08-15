@@ -8,16 +8,6 @@
 # You should probably also review/customize the configuration variables in `config.tfvars`
 
 
-terraform {
-  required_providers {
-    snowflake = {
-      source  = "Snowflake-Labs/snowflake"
-      version = "0.36.0"
-    }
-  }
-  required_version = ">= 1.2.0"
-}
-
 # Declare required default and custom configs
 variable edu_snowflake_default_databases {}
 variable edu_snowflake_custom_databases {}
@@ -53,17 +43,17 @@ locals {
 }
 
 # one module to rule them all! :)
-module edu_snowflake {
-  source = "./modules/edu-snowflake"
+# module edu_snowflake {
+#   source = "./modules/edu-snowflake"
 
-  databases = local.databases
-  schemas = local.schemas
-  tables_template = local.tables_template
-  tables_change_version = local.tables_change_version
-  file_formats = local.file_formats
-  warehouses = local.warehouses
-  roles = local.roles
-  users = local.users
-  grants_objects = local.grants_objects
-  grants_roles = local.grants_roles
-}
+#   databases = local.databases
+#   schemas = local.schemas
+#   tables_template = local.tables_template
+#   tables_change_version = local.tables_change_version
+#   file_formats = local.file_formats
+#   warehouses = local.warehouses
+#   roles = local.roles
+#   users = local.users
+#   grants_objects = local.grants_objects
+#   grants_roles = local.grants_roles
+# }

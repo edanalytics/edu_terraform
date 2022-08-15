@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  This template will deploy and configure the Lambda Functions required to deploy
+  the EdFi Airflow system.
+  
+
+Parameters:
+  EnvLabel:
+    Default: ''
+    Description: Provide a label for your environment to identify resources easier.
+    Type: String
+  S3BucketSourceCode:
+    Type: String
+    Default: edfi-aws-quick-deploy
+    Description: This provides the name of the S3 bucket where the Lambda source code
+      resides.
+  S3KeySourceCode:
+    Type: String
+    Default: lambdas
+    Description: This provides the folder name inside the S3 bucket where the Lambda
+      source code resides.
+
+
+Rules:
+  SubnetsInVPC:
+    Assertions:
+      - Assert: !EachMemberIn
+          - !ValueOfAll
+            - AWS::EC2::Subnet::Id
+            - VpcId
+          - !RefAll 'AWS::EC2::VPC::Id'
+        AssertDescription: All subnets provided must in the VPC selected for use
+
+
+Resources:
+  SSMParamStoreRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+
+  SSMParameterStorePolicy:
+    Type: AWS::IAM::Policy
+    DependsOn:
+      - SSMParamStoreRole
+    Properties:
+      PolicyName: !Sub 'edfi-airflow-ssm-param-store-${EnvLabel}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:PutParameter
+              - ssm:DeleteParameter
+              - kms:Encrypt
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+      Roles:
+        - !Ref 'SSMParamStoreRole'
+
+  CFHelperLambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.7
+      Content:
+        S3Bucket: !Ref 'S3BucketSourceCode'
+        S3Key: !Sub '${S3KeySourceCode}/crherlper-lambda-layer-python3-7.zip'
+      Description: AWS CloudFormation helper lambda layer
+      LayerName: CFHelper-python3-7
+
+  SSMParameterStoreLambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - SSMParamStoreRole
+      - SSMParameterStorePolicy
+      - CFHelperLambdaLayer
+    Properties:
+      Handler: index.lambda_handler
+      Layers:
+        - !Ref 'CFHelperLambdaLayer'
+      Description: EdFi Airflow Password Store to SSM
+      FunctionName: !Sub 'edfi-airflow-ssm-param-store-${EnvLabel}'
+      Role: !GetAtt 'SSMParamStoreRole.Arn'
+      Runtime: python3.7
+      Timeout: 900
+      Code:
+        ZipFile: |
+          import signal
+          import traceback
+          from boto3 import client
+          from crhelper import CfnResource
+          
+          helper = CfnResource(log_level='INFO')
+          
+          def lambda_handler(event, context):
+              signal.alarm(int((context.get_remaining_time_in_millis() / 1000) - 1))
+              helper(event, context)
+          
+          @helper.create
+          def create(event, _):
+                 REGION      = event['ResourceProperties']['region']
+                 KEYID       = event['ResourceProperties']["keyid"]
+                 NAME        = event['ResourceProperties']['name']
+                 VALUE       = event['ResourceProperties']['value']
+          
+                 try:
+                     ssm_client  = client('ssm', region_name=REGION)
+          
+                     store_value(ssm_client, NAME, VALUE, True, KEYID)
+          
+                     helper.Data['ParameterName'] = NAME
+          
+                 except Exception as e:
+                     traceback.print_exc()
+          
+          def store_value(client, name, value, secure, key):
+                 if secure:
+                    client.put_parameter(
+                        Name    = name,
+                        Value   = value,
+                        Type    = 'SecureString',
+                        KeyId   = key
+                    )
+                 else:
+                    client.put_parameter(
+                        Name    = name,
+                        Value   = value,
+                        Type    = 'String'
+                    )
+          
+          @helper.update
+          def no_op(_, __):
+             pass
+          
+          @helper.delete
+          def delete(event, _):
+              REGION      = event['ResourceProperties']['region']
+              NAME        = event['ResourceProperties']['name']
+              VALUE       = event['ResourceProperties']['value']
+          
+              try:
+                  ssm_client  = client('ssm', region_name=REGION)
+                  delete_param(ssm_client, NAME)
+          
+              except Exception as e:
+                  traceback.print_exc()
+          
+          def delete_param(client, name):
+              client.delete_parameter(
+                  Name    = name
+              )
+          
+          def timeout_handler(_signal, _frame):
+              '''Handle SIGALRM'''
+              raise Exception('lambda function timeout exceeded')
+          
+          signal.signal(signal.SIGALRM, timeout_handler)
+
+  SSMParameterStoreLambdaVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref 'SSMParameterStoreLambdaFunction'
+
+
+Outputs:
+  SsmParamStoreLambdaFunctionName:
+    Description: Lambda Function Name to handle storing passwords in SSM for the environment.
+    Value: !Ref 'SSMParameterStoreLambdaFunction'
+    Export:
+      Name: !Sub '${AWS::StackName}-SsmParamStoreLambdaFunctionName'
+  SsmParamStoreLambdaFunctionArn:
+    Description: Lambda Function ARN to handle storing passwords in SSM for the environment.
+    Value: !GetAtt 'SSMParameterStoreLambdaFunction.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-SsmParamStoreLambdaFunctionArn'
+  SSMParamStoreIamRoleName:
+    Description: IAM Role name for the SSM Parameter Store Lambda Function
+    Value: !Ref 'SSMParamStoreRole'
+    Export:
+      Name: !Sub '${AWS::StackName}-SSMParamStoreIamRoleName'

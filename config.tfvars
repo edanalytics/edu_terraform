@@ -27,6 +27,32 @@ tenants = [
 ]
 
 
+# - Customize the environment and domain_name (at least)
+# - You have to create the source_bucket, datalake_bucket, and
+#   ssl_cert MANUALLY before running Terraform
+# - This assumes the VPC, subnets, elastic IPs, etc. already exist
+#   (created via CE's EA-StandardSecurity CF template)
+aws_environment         = "tf-test"
+# ^ note that the SnowFlakeIAMUser, which is names as
+# >  edfi-airflow-${aws_environment}-airflow-dev-datalake-snowflake-ReadOnly
+# has max length 64 chars... so your aws_environment must be less than 10 chars long!
+aws_domain_name         = "terraform-test.dataeng.edanalytics.org"
+aws_hosted_zone_id      = "Z06207691R9OY2GPKGJOW"
+aws_source_bucket       = "edfi-airflow-cloudformation-terraform-test"
+aws_vpc_id              = "vpc-08df2ff0c9d2fd9d0"
+aws_public_subnet_1_id  = "subnet-05024935d61d67c72"
+aws_public_subnet_2_id  = "subnet-08b36c0f05efdff0f"
+aws_private_subnet_1_id = "subnet-0af9d838c254be8b1"
+aws_private_subnet_2_id = "subnet-0554818457c878215"
+aws_ec2_key_pair_name   = "DE-Virginia"
+aws_ec2_size            = "large"
+aws_ec2_project_repo    = "int_edfi_project_template"
+aws_ec2_ssh_github_keys = "ea-mtenhoor ejoranlienea jayckaiser tomreitz jordanmader13"
+aws_ec2_ssl_cert_arn    = "arn:aws:acm:us-east-1:117752232666:certificate/1dbbf2d9-b81d-495d-b14e-540c3084aac7"
+aws_datalake_bucket     = "edfi-airflow-tf-test-airflow-dev-datalake"
+aws_rds_password        = "thisisatestpassword"
+
+
 
 # -----------------------------------------------------------------------------
 # Security policies, integrations, and federated auth with an IdP
