@@ -43,17 +43,17 @@ locals {
 }
 
 # one module to rule them all! :)
-# module edu_snowflake {
-#   source = "./modules/edu-snowflake"
+module edu_snowflake {
+  source = "./modules/edu-snowflake"
 
-#   databases = local.databases
-#   schemas = local.schemas
-#   tables_template = local.tables_template
-#   tables_change_version = local.tables_change_version
-#   file_formats = local.file_formats
-#   warehouses = local.warehouses
-#   roles = local.roles
-#   users = local.users
-#   grants_objects = local.grants_objects
-#   grants_roles = local.grants_roles
-# }
+  databases = local.databases
+  schemas = local.schemas
+  tables_template = local.tables_template
+  tables_change_version = local.tables_change_version
+  file_formats = local.file_formats
+  warehouses = local.warehouses
+  roles = local.roles
+  users = local.users
+  grants_objects = local.grants_objects
+  grants_roles = local.grants_roles
+}

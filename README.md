@@ -12,6 +12,7 @@ Note that some resources must already exist in AWS before you can run this Terra
 
 
 To run the code locally:
+1. [Install Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 1. Set up your Snowflake credentials:
     1. Set up a file such as `~/.snowflake/credentials-account.env` with
 
@@ -28,7 +29,6 @@ To run the code locally:
     1. Create an [IAM programmatic user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) with full administrative access
     1. Set up a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) for this user
     1. Activate the profile by running `export AWS_PROFILE=yournamedprofile`
-1. [Install Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 1. In this repo, review/customize the settings in the `config.tfvars` file.
 1. Run `terraform apply -var-file=config.tfvars` to stand up the infrastructure.
 1. Run `terraform destroy -var-file=config.tfvars` to remove everything.
