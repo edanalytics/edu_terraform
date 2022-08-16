@@ -1,6 +1,6 @@
 # edu_terraform
 
-This repo contains Terraform code for standing up the infrastructure (databases, schemas, warehouses, users, roles, etc.) in Snowflake for the Ed-Fi data warehouse product. The structure is based on SQL from [this repo](https://github.com/edanalytics/snowflake_init). This Terraform also provisions the AWS infrastructure needed by creating ClourFormation stacks based on the templates in [this repo](https://github.com/edanalytics/edfi_airflow_cloudformation).
+This repo contains Terraform code for standing up the infrastructure (databases, schemas, warehouses, users, roles, etc.) in Snowflake for the Ed-Fi data warehouse product. The structure is based on SQL from [this repo](https://github.com/edanalytics/snowflake_init). This Terraform also provisions the AWS infrastructure needed by creating CloudFormation stacks based on the templates in [this repo](https://github.com/edanalytics/edfi_airflow_cloudformation).
 
 Note that some resources must already exist in AWS before you can run this Terraform, namely the
 
