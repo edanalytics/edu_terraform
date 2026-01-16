@@ -45,25 +45,3 @@ Coming soon!
 In addition to the default setup that comes with the modules, we also provide some "playbooks" which are optional snippets of TF code you can copy into your project to achieve a specific objective or support some functionality. See the following `playbooks/`:
 * [limit access to your Snowflake account from specific IP address ranges](playbooks/snowflake-network-policy.tf)
 * ...
-
-
-
-
-## REMOVE !!! AWS (experimental)
-Terraform/OpenTofu code for provisioning some of the AWS infrastructure needed for EDU by creating CloudFormation stacks based on the templates in [this repo](https://github.com/edanalytics/edfi_airflow_cloudformation). This is experimental and commented out by default.
-
-Note that some resources must already exist in AWS before you can run this Terraform, namely the
-
-* networking setup (VPC, subnets, elastic IPs, hosted zone, etc.)
-* EC2 key pair (for SSHing into the Airflow instance)
-* ACM certificate (for serving traffic over SSL from your `aws_domain_name`)
-* source S3 bucket (containing the CloudFormation template for the stack and the Lambda functions they deploy)
-* datalake S3 bucket (where raw Ed-Fi data will be stored)
-
-### Credential setup
-Create an [IAM programmatic user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) with full administrative access
-
-Set up a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) for this user
-Activate the profile by running `export AWS_PROFILE=yournamedprofile`
-
-Note that provisioning the AWS infrastructure takes 15-20 minutes.
