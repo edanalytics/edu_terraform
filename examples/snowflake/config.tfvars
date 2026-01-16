@@ -1,0 +1,1 @@
+snowflake_profile = "profile_identifier" # (from Credential Setup documentation)

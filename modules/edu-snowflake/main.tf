@@ -1,186 +1,694 @@
-terraform {
-  required_providers {
-    snowflake = {
-      source  = "Snowflake-Labs/snowflake"
-      version = "0.36.0"
-      configuration_aliases = [ snowflake.sysadmin, snowflake.securityadmin, snowflake.useradmin ]
-    }
-  }
-  required_version = ">= 1.2.0"
-}
-
-provider snowflake {
-  alias  = "sysadmin"
-  role = "sysadmin"
-}
-
-provider snowflake {
-  alias  = "useradmin"
-  role = "useradmin"
-}
-
-provider snowflake {
-  alias  = "securityadmin"
-  role = "securityadmin"
-}
-
-
 # -----------------------------------------------------------------------------
 # Databases
-resource snowflake_database databases {
-  count                       = length(var.databases)
-  name                        = var.databases[count.index].name
-  comment                     = var.databases[count.index].comment
+resource snowflake_database edu_raw_databases {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name     = "${each.value.prefix}raw"
+  comment  = "Raw data (${each.value.name} environment)"
   data_retention_time_in_days = 1
 }
 
+resource snowflake_database edu_analytics_databases {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name     = "${each.value.prefix}analytics"
+  comment  = "Analytics data (${each.value.name} environment)"
+  data_retention_time_in_days = 1
+}
+
+
+
 # -----------------------------------------------------------------------------
 # Schemas
-resource snowflake_schema schemas {
-  count      = length(var.schemas)
-  name       = var.schemas[count.index].name
-  database   = var.schemas[count.index].database
-  comment    = var.schemas[count.index].comment
-  depends_on = [ snowflake_database.databases ]
+resource snowflake_schema edu_raw_edfi3_schemas {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name       = "edfi3"
+  database   = "${each.value.prefix}raw"
+  comment    = "Raw data from Ed-Fi Suite 3 systems (${each.value.name} environment)"
+  depends_on = [ snowflake_database.edu_raw_databases ]
 }
+
+resource snowflake_schema edu_raw_util_schemas {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name       = "util"
+  database   = "${each.value.prefix}raw"
+  comment    = "Raw schema for holding stages (${each.value.name} environment)"
+  depends_on = [ snowflake_database.edu_raw_databases ]
+}
+
+
 
 # -----------------------------------------------------------------------------
 # Tables
-module tables_template {
-  source               = "./tables/template"
-
-  tables               = var.tables_template
-  depends_on_databases = snowflake_database.databases
-  depends_on_schemas   = snowflake_schema.schemas
+locals {
+  template_columns = [
+    { name = "filename",           type = "string" },
+    { name = "file_row_number",    type = "int" },
+    { name = "tenant_code",        type = "string" },
+    { name = "api_year",           type = "int" },
+    { name = "pull_date",          type = "date" },
+    { name = "pull_timestamp",     type = "timestamp_ntz" },
+    { name = "name",               type = "string" },
+    { name = "ods_version",        type = "string" },
+    { name = "data_model_version", type = "string" },
+    { name = "v",                  type = "variant" },
+  ]
+  mcv_columns = [
+    { name = "tenant_code",    type = "string" },
+    { name = "api_year",       type = "int" },
+    { name = "name",           type = "string" },
+    { name = "is_deletes",     type = "boolean" },
+    { name = "pull_date",      type = "date" },
+    { name = "pull_timestamp", type = "timestamp_ntz" },
+    { name = "max_version",    type = "int" },
+    { name = "is_active",      type = "boolean" },
+  ]
 }
-module tables_change_version {
-  source               = "./tables/change-version"
 
-  tables               = var.tables_change_version
-  depends_on_databases = snowflake_database.databases
-  depends_on_schemas   = snowflake_schema.schemas
+resource snowflake_table edu_template_tables {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name       = "_template_table"
+  database   = "${each.value.prefix}raw"
+  schema     = "edfi3"
+  depends_on = [ snowflake_schema.edu_raw_edfi3_schemas ]
+
+  dynamic "column" {
+    for_each = local.template_columns
+    content {
+      name     = column.value.name
+      type     = column.value.type
+    }
+  }
 }
+
+resource snowflake_table edu_descriptors_tables {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name       = "_descriptors"
+  database   = "${each.value.prefix}raw"
+  schema     = "edfi3"
+  depends_on = [ snowflake_schema.edu_raw_edfi3_schemas ]
+
+  dynamic "column" {
+    for_each = local.template_columns
+    content {
+      name     = column.value.name
+      type     = column.value.type
+    }
+  }
+}
+
+resource snowflake_table edu_deletes_tables {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name       = "_deletes"
+  database   = "${each.value.prefix}raw"
+  schema     = "edfi3"
+  depends_on = [ snowflake_schema.edu_raw_edfi3_schemas ]
+
+  dynamic "column" {
+    for_each = local.template_columns
+    content {
+      name     = column.value.name
+      type     = column.value.type
+    }
+  }
+}
+
+resource snowflake_table edu_meta_change_version_tables {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name       = "_meta_change_versions"
+  database   = "${each.value.prefix}raw"
+  schema     = "edfi3"
+  depends_on = [ snowflake_schema.edu_raw_edfi3_schemas ]
+
+  dynamic "column" {
+    for_each = local.mcv_columns
+    content {
+      name     = column.value.name
+      type     = column.value.type
+    }
+  }
+}
+
+
 
 # -----------------------------------------------------------------------------
-# Shares
+# Warehouses
+resource snowflake_warehouse edu_loading_warehouses {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name                = "loading_${each.value.name}"
+  comment             = "Loading raw data (${each.value.name} environment)"
+  warehouse_size      = "${each.value.name}" == "test" ? "xsmall" : "small"
+  auto_suspend        = 60
+  auto_resume         = true
+  initially_suspended = true
+  statement_timeout_in_seconds = 14400 # 4 hours... is this a good default? should it be configurable?
+}
+resource snowflake_warehouse edu_transforming_warehouses {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name                = "transforming_${each.value.name}"
+  comment             = "Transforming raw data (${each.value.name} environment)"
+  warehouse_size      = "medium"
+  auto_suspend        = 60
+  auto_resume         = true
+  initially_suspended = true
+  statement_timeout_in_seconds = 14400 # 4 hours... is this a good default? should it be configurable?
+}
+resource snowflake_warehouse edu_district_analyst_warehouse {
+  provider = snowflake.sysadmin
+  name                = "district_analyst"
+  comment             = "District Analyst Queries"
+  warehouse_size      = "small"
+  auto_suspend        = 300
+  auto_resume         = true
+  initially_suspended = true
+  statement_timeout_in_seconds = 14400 # 4 hours... is this a good default? should it be configurable?
+}
+
 
 
 # -----------------------------------------------------------------------------
 # File formats
-resource snowflake_file_format file_formats {
-  count              = length(var.file_formats)
-  name               = var.file_formats[count.index].name
-  database           = var.file_formats[count.index].database
-  schema             = "${upper(var.file_formats[count.index].schema)}"
-  format_type        = "${upper(var.file_formats[count.index].format_type)}"
-  binary_format      = "${upper(var.file_formats[count.index].binary_format)}"
-  compression        = var.file_formats[count.index].compression
-  enable_octal       = var.file_formats[count.index].enable_octal
-  allow_duplicate    = var.file_formats[count.index].allow_duplicate
-  strip_outer_array  = var.file_formats[count.index].strip_outer_array
-  strip_null_values  = var.file_formats[count.index].strip_null_values
-  ignore_utf8_errors = var.file_formats[count.index].ignore_utf8_errors
-  depends_on         = [ snowflake_database.databases, snowflake_schema.schemas ]
+resource snowflake_file_format edu_json_file_formats {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name               = "json_default"
+  database           = "${each.value.prefix}raw"
+  schema             = "public"
+  format_type        = "json"
+  compression        = "auto"
+  enable_octal       = false
+  allow_duplicate    = false
+  strip_outer_array  = false
+  strip_null_values  = true
+  ignore_utf8_errors = false
+  depends_on         = [ snowflake_database.edu_raw_databases ]
+}
+resource snowflake_file_format edu_csv_file_formats {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.sysadmin
+  name               = "csv_default"
+  database           = "${each.value.prefix}raw"
+  schema             = "public"
+  format_type        = "CSV"
+  skip_header        = 1
+  field_optionally_enclosed_by = "\\\""
+  depends_on         = [ snowflake_database.edu_raw_databases ]
 }
 
-# -----------------------------------------------------------------------------
-# Warehouses
-resource snowflake_warehouse warehouses {
-  count               = length(var.warehouses)
-  name                = var.warehouses[count.index].name
-  comment             = var.warehouses[count.index].comment
-  warehouse_size      = var.warehouses[count.index].size
-  auto_suspend        = var.warehouses[count.index].auto_suspend
-  auto_resume         = var.warehouses[count.index].auto_resume
-  initially_suspended = var.warehouses[count.index].initially_suspended
-}
+
 
 # -----------------------------------------------------------------------------
 # Roles
-# (must be a module so we can force use of `useradmin` role by provider)
-module roles {
-  source = "./roles"
-  providers = {
-    # useradmin is enough to create roles, but we cannot drop them after future grants are added for the role...
-    # so we must use securityadmin in order to be able to drop the roles when we destroy.
-    snowflake = snowflake.securityadmin
-  }
-
-  roles = var.roles
+resource snowflake_account_role raw_r_roles {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name     = "db_${each.value.prefix}raw_r"
+  comment  = "Access role: read on all schemas and tables in raw db (${each.value.name} environment)"
 }
+resource snowflake_account_role raw_rw_roles {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name     = "db_${each.value.prefix}raw_rw"
+  comment  = "Access role: write on all schemas and tables in raw db (${each.value.name} environment)"
+}
+resource snowflake_account_role analytics_r_roles {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name     = "db_${each.value.prefix}analytics_r"
+  comment  = "Access role: read on all schemas and tables in analytics (${each.value.name} environment)"
+}
+resource snowflake_account_role analytics_rw_roles {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name     = "db_${each.value.prefix}analytics_rw"
+  comment  = "Access role: write on all schemas and tables in analytics (${each.value.name} environment)"
+}
+resource snowflake_account_role loader_roles {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name     = "loader_${each.value.name}"
+  comment  = "Functional role: Raw data loading (${each.value.name} environment)"
+}
+resource snowflake_account_role transformer_roles {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name     = "transformer_${each.value.name}"
+  comment  = "Functional role: dbt (${each.value.name} environment)"
+}
+resource snowflake_account_role district_analyst_role {
+  provider = snowflake.securityadmin
+  name     = "district_analyst"
+  comment  = "Functional role: District Analysts reading analytics data"
+}
+
+
 
 # -----------------------------------------------------------------------------
 # Users
-# (must be a module so we can force use of `useradmin` role by provider)
-module users {
-  source = "./users"
-  providers = {
-    snowflake = snowflake.useradmin
-  }
-
-  users = var.users
-  depends_on_roles = module.roles
-  depends_on_warehouses = snowflake_warehouse.warehouses
+resource snowflake_legacy_service_user edu_airflow_users {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name              = "loader_airflow_${each.value.name}"
+  comment           = "Airflow service user (${each.value.name} environment)"
+  default_warehouse = "loading_${each.value.name}"
+  default_namespace = "${each.value.prefix}raw"
+  default_role      = "loader_${each.value.name}"
+  depends_on        = [ snowflake_account_role.loader_roles, snowflake_warehouse.edu_loading_warehouses, snowflake_schema.edu_raw_edfi3_schemas ]
+}
+resource snowflake_legacy_service_user edu_dbt_users {
+  for_each = { for env in var.environments : env.name => env }
+  provider = snowflake.securityadmin
+  name              = "transformer_dbt_${each.value.name}"
+  comment           = "dbt service user (${each.value.name} environment)"
+  default_warehouse = "transforming_${each.value.name}"
+  default_namespace = "${each.value.prefix}analytics"
+  default_role      = "transformer_${each.value.name}"
+  depends_on        = [ snowflake_account_role.transformer_roles, snowflake_warehouse.edu_transforming_warehouses, snowflake_schema.edu_raw_edfi3_schemas ]
 }
 
 # -----------------------------------------------------------------------------
-# Grants on objects to roles
-# (must be a module so we can force use of `securityadmin` role by provider)
-module grants_objects {
-  source = "./grants/objects"
-  providers = {
-    snowflake = snowflake.securityadmin
+# Grants (privileges to role)
+
+# grant role db_analytics_r to role district_analyst;
+# (_only_ prod, not dev/test/other env schemas)
+resource "snowflake_grant_account_role" "db_analytics_r_to_district_analyst" {
+  provider         = snowflake.securityadmin
+  role_name        = "db_analytics_r"
+  parent_role_name = "district_analyst"
+  depends_on       = [ snowflake_account_role.district_analyst_role, snowflake_account_role.analytics_r_roles ]
+}
+# grant usage, monitor on warehouse district_analyst to role district_analyst;
+resource "snowflake_grant_privileges_to_account_role" "wh_usage_to_security_manager" {
+  provider          = snowflake.securityadmin
+  privileges        = ["USAGE", "MONITOR"]
+  account_role_name = "district_analyst"
+  on_account_object {
+    object_type = "WAREHOUSE"
+    object_name = "district_analyst"
   }
-
-  count                 = length(var.grants_objects)
-  privileges            = var.grants_objects[count.index].privileges
-  on_object_type        = var.grants_objects[count.index].on_object_type
-  on_object_names       = var.grants_objects[count.index].on_object_names
-  in_parent_object_type = var.grants_objects[count.index].in_parent_object_type
-  in_parent_object_name = var.grants_objects[count.index].in_parent_object_name
-  on_future             = var.grants_objects[count.index].on_future
-  to_role_names         = var.grants_objects[count.index].to_role_names
-
-  # We require all objects to be created before grants are made on them
-  depends_on = [
-    snowflake_database.databases,
-    snowflake_schema.schemas,
-    module.tables_template,
-    module.tables_change_version,
-    snowflake_file_format.file_formats,
-    snowflake_warehouse.warehouses,
-    module.roles
-  ]
-
-  # and we pass all the objects to the module so it can reference them when adding grants
-  databases             = snowflake_database.databases
-  schemas               = snowflake_schema.schemas
-  tables                = concat(var.tables_template, var.tables_change_version)
-  views                 = [] # snowflake_view.views
-  stages                = [] # snowflake_stage.stages
-  file_formats          = snowflake_file_format.file_formats
-  warehouses            = snowflake_warehouse.warehouses
-  roles                 = module.roles
+  depends_on        = [ snowflake_warehouse.edu_district_analyst_warehouse, snowflake_account_role.district_analyst_role ]
 }
 
+# grant usage on database raw to role db_raw_r;
+resource "snowflake_grant_privileges_to_account_role" "usage_on_raw_to_db_raw_r" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}raw_r"
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = "${each.value.prefix}raw"
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_account_role.raw_r_roles ]
+}
+# grant usage, create schema on database raw to role db_raw_rw;
+resource "snowflake_grant_privileges_to_account_role" "usage_create_schema_on_raw_to_db_raw_rw" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE", "CREATE SCHEMA"]
+  account_role_name = "db_${each.value.prefix}raw_rw"
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = "${each.value.prefix}raw"
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_account_role.raw_rw_roles ]
+}
+# grant usage on database analytics to role db_analytics_r;
+resource "snowflake_grant_privileges_to_account_role" "usage_on_analytics_to_db_analytics_r" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}analytics_r"
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = "${each.value.prefix}analytics"
+  }
+  depends_on        = [ snowflake_database.edu_analytics_databases, snowflake_account_role.analytics_r_roles ]
+}
+# grant usage, create schema on database analytics to role db_analytics_rw;
+resource "snowflake_grant_privileges_to_account_role" "usage_create_schema_on_analytics_to_db_analytics_rw" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE", "CREATE SCHEMA"]
+  account_role_name = "db_${each.value.prefix}analytics_rw"
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = "${each.value.prefix}analytics"
+  }
+  depends_on        = [ snowflake_database.edu_analytics_databases, snowflake_account_role.analytics_rw_roles ]
+}
+# grant usage on all schemas in database raw to role db_raw_r;
+resource "snowflake_grant_privileges_to_account_role" "usage_on_all_schemas_raw_to_db_raw_r" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}raw_r"
+  on_schema {
+    all_schemas_in_database = "${each.value.prefix}raw"
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_account_role.raw_r_roles ]
+}
+# grant usage on all schemas in database raw to role db_raw_r;
+resource "snowflake_grant_privileges_to_account_role" "usage_on_future_raw_to_db_raw_r" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}raw_r"
+  on_schema {
+    future_schemas_in_database = "${each.value.prefix}raw"
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_account_role.raw_r_roles ]
+}
+# grant usage on all schemas in database analytics to role db_analytics_r;
+resource "snowflake_grant_privileges_to_account_role" "usage_on_all_schemas_analytics_to_db_analytics_r" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}analytics_r"
+  on_schema {
+    all_schemas_in_database = "${each.value.prefix}analytics"
+  }
+  depends_on        = [ snowflake_database.edu_analytics_databases, snowflake_account_role.analytics_r_roles ]
+}
+# grant usage on future schemas in database analytics to role db_analytics_r;
+resource "snowflake_grant_privileges_to_account_role" "usage_on_future_analytics_to_db_analytics_r" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}analytics_r"
+  on_schema {
+    future_schemas_in_database = "${each.value.prefix}analytics"
+  }
+  depends_on        = [ snowflake_database.edu_analytics_databases, snowflake_account_role.analytics_r_roles ]
+}
+
+# -- all for rw roles
+# -- todo: actually all, or do we want to distinguish between rw and admin?
+# -- todo: what about snapshot permissions? just let dbt handle?
+# grant all on all schemas in database raw to role db_raw_rw;
+resource "snowflake_grant_privileges_to_account_role" "all_on_all_schemas_raw_to_db_raw_rw" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  all_privileges    = true
+  account_role_name = "db_${each.value.prefix}raw_rw"
+  on_schema {
+    all_schemas_in_database = "${each.value.prefix}raw"
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_account_role.raw_rw_roles ]
+}
+# grant usage on all schemas in database raw to role db_raw_r;
+resource "snowflake_grant_privileges_to_account_role" "all_on_future_raw_to_db_raw_rw" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  all_privileges    = true
+  account_role_name = "db_${each.value.prefix}raw_rw"
+  on_schema {
+    future_schemas_in_database = "${each.value.prefix}raw"
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_account_role.raw_rw_roles ]
+}
+# grant usage on all schemas in database analytics to role db_analytics_r;
+resource "snowflake_grant_privileges_to_account_role" "all_on_all_schemas_analytics_to_db_analytics_rw" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  all_privileges    = true
+  account_role_name = "db_${each.value.prefix}analytics_rw"
+  on_schema {
+    all_schemas_in_database = "${each.value.prefix}analytics"
+  }
+  depends_on        = [ snowflake_database.edu_analytics_databases, snowflake_account_role.analytics_rw_roles ]
+}
+# grant usage on future schemas in database analytics to role db_analytics_r;
+resource "snowflake_grant_privileges_to_account_role" "all_on_future_analytics_to_db_analytics_rw" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  all_privileges    = true
+  account_role_name = "db_${each.value.prefix}analytics_rw"
+  on_schema {
+    future_schemas_in_database = "${each.value.prefix}analytics"
+  }
+  depends_on        = [ snowflake_database.edu_analytics_databases, snowflake_account_role.analytics_rw_roles ]
+}
+
+
+
+
+# READ ALL grants
+resource "snowflake_grant_privileges_to_account_role" "read_all_grants" {
+  provider          = snowflake.securityadmin
+  for_each = {
+    for tup in setproduct(
+      tolist([ for env in var.environments : env.prefix ]),
+      ["raw", "analytics"],
+      ["TABLES", "VIEWS"]
+    ) : join("-", tup) => {
+      "prefix"   = tup[0]
+      "database" = tup[1]
+      "object"   = tup[2]
+    }
+  }
+  privileges        = ["SELECT"]
+  account_role_name = "db_${each.value.prefix}${each.value.database}_r"
+  on_schema_object {
+    all {
+      object_type_plural = "${each.value.object}"
+      in_database        = "${each.value.prefix}${each.value.database}"
+    }
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_database.edu_analytics_databases, snowflake_account_role.raw_r_roles, snowflake_account_role.analytics_r_roles ]
+}
+# READ FUTURE grants
+resource "snowflake_grant_privileges_to_account_role" "read_future_grants" {
+  provider          = snowflake.securityadmin
+  for_each = {
+    for tup in setproduct(
+      tolist([ for env in var.environments : env.prefix ]),
+      ["raw", "analytics"],
+      ["TABLES", "VIEWS"]
+    ) : join("-", tup) => {
+      "prefix"   = tup[0]
+      "database" = tup[1]
+      "object"   = tup[2]
+    }
+  }
+  privileges        = ["SELECT"]
+  account_role_name = "db_${each.value.prefix}${each.value.database}_r"
+  on_schema_object {
+    future {
+      object_type_plural = "${each.value.object}"
+      in_database        = "${each.value.prefix}${each.value.database}"
+    }
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_database.edu_analytics_databases, snowflake_account_role.raw_r_roles, snowflake_account_role.analytics_r_roles ]
+}
+# WRITE ALL grants
+resource "snowflake_grant_privileges_to_account_role" "write_all_grants" {
+  provider          = snowflake.securityadmin
+  for_each = {
+    for tup in setproduct(
+      tolist([ for env in var.environments : env.prefix ]),
+      ["raw", "analytics"],
+      ["TABLES", "VIEWS"]
+    ) : join("-", tup) => {
+      "prefix"   = tup[0]
+      "database" = tup[1]
+      "object"   = tup[2]
+    }
+  }
+  all_privileges    = true
+  account_role_name = "db_${each.value.prefix}${each.value.database}_rw"
+  on_schema_object {
+    all {
+      object_type_plural = "${each.value.object}"
+      in_database        = "${each.value.prefix}${each.value.database}"
+    }
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_database.edu_analytics_databases, snowflake_account_role.raw_rw_roles, snowflake_account_role.analytics_rw_roles ]
+}
+# WRITE FUTURE grants
+resource "snowflake_grant_privileges_to_account_role" "write_future_grants" {
+  provider          = snowflake.securityadmin
+  for_each = {
+    for tup in setproduct(
+      tolist([ for env in var.environments : env.prefix ]),
+      ["raw", "analytics"],
+      ["TABLES", "VIEWS"]
+    ) : join("-", tup) => {
+      "prefix"   = tup[0]
+      "database" = tup[1]
+      "object"   = tup[2]
+    }
+  }
+  all_privileges    = true
+  account_role_name = "db_${each.value.prefix}${each.value.database}_rw"
+  on_schema_object {
+    future {
+      object_type_plural = "${each.value.object}"
+      in_database        = "${each.value.prefix}${each.value.database}"
+    }
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_database.edu_analytics_databases, snowflake_account_role.raw_rw_roles, snowflake_account_role.analytics_rw_roles ]
+}
+
+# USAGE on ALL STAGES / FILE FORMATS grants
+resource "snowflake_grant_privileges_to_account_role" "usage_all_stages_file_formats_grants" {
+  provider          = snowflake.securityadmin
+  for_each = {
+    for tup in setproduct(
+      tolist([ for env in var.environments : env.prefix ]),
+      ["r", "rw"],
+      ["STAGES", "FILE FORMATS"]
+    ) : join("-", tup) => {
+      "prefix" = tup[0]
+      "mode"   = tup[1]
+      "object" = tup[2]
+    }
+  }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}raw_${each.value.mode}"
+  on_schema_object {
+    all {
+      object_type_plural = "${each.value.object}"
+      in_database        = "${each.value.prefix}raw"
+    }
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_database.edu_analytics_databases, snowflake_account_role.raw_r_roles, snowflake_account_role.analytics_r_roles ]
+}
+# USAGE on FUTURE STAGES / FILE FORMATS grants
+resource "snowflake_grant_privileges_to_account_role" "usage_future_stages_file_formats_grants" {
+  provider          = snowflake.securityadmin
+  for_each = {
+    for tup in setproduct(
+      tolist([ for env in var.environments : env.prefix ]),
+      ["r", "rw"],
+      ["STAGES", "FILE FORMATS"]
+    ) : join("-", tup) => {
+      "prefix" = tup[0]
+      "mode"   = tup[1]
+      "object" = tup[2]
+    }
+  }
+  privileges        = ["USAGE"]
+  account_role_name = "db_${each.value.prefix}raw_${each.value.mode}"
+  on_schema_object {
+    future {
+      object_type_plural = "${each.value.object}"
+      in_database        = "${each.value.prefix}raw"
+    }
+  }
+  depends_on        = [ snowflake_database.edu_raw_databases, snowflake_database.edu_analytics_databases, snowflake_account_role.raw_r_roles, snowflake_account_role.analytics_r_roles ]
+}
 
 # -----------------------------------------------------------------------------
-# Grants on objects to roles
-# (must be a module so we can force use of `securityadmin` role by provider)
-module grants_roles {
-  source = "./grants/roles"
-  providers = {
-    snowflake = snowflake.securityadmin
-  }
+# Grants (role to role)
 
-  count           = length(var.grants_roles)
-  role_names      = var.grants_roles[count.index].role_names
-  to_object_type  = var.grants_roles[count.index].to_object_type
-  to_object_names = var.grants_roles[count.index].to_object_names
-
-  # We require roles and users to be created before grants are made for them
-  depends_on = [
-    module.roles,
-    module.users
-  ]
+# loader roles:
+resource "snowflake_grant_account_role" "db_raw_rw_to_loader" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "db_${each.value.prefix}raw_rw"
+  parent_role_name = "loader${each.value.suffix}"
+  depends_on       = [ snowflake_account_role.raw_rw_roles, snowflake_account_role.loader_roles ]
 }
+# transformer roles:
+resource "snowflake_grant_account_role" "db_raw_r_to_transformer" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "db_${each.value.prefix}raw_r"
+  parent_role_name = "transformer${each.value.suffix}"
+  depends_on       = [ snowflake_account_role.raw_r_roles, snowflake_account_role.transformer_roles ]
+}
+resource "snowflake_grant_account_role" "db_analytics_rw_to_transformer" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "db_${each.value.prefix}analytics_rw"
+  parent_role_name = "transformer${each.value.suffix}"
+  depends_on       = [ snowflake_account_role.raw_rw_roles, snowflake_account_role.transformer_roles ]
+}
+# -- note: transformer_dev can read from prod raw data, but can't write to prod analytics
+resource "snowflake_grant_account_role" "db_raw_r_to_transformer_dev" {
+  provider         = snowflake.securityadmin
+  role_name        = "db_raw_r"
+  parent_role_name = "transformer_dev"
+  depends_on       = [ snowflake_account_role.raw_r_roles, snowflake_account_role.transformer_roles ]
+}
+
+# -- grant functional roles back to sysadmin
+resource "snowflake_grant_account_role" "loader_to_sysadmin" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "loader${each.value.suffix}"
+  parent_role_name = "sysadmin"
+  depends_on       = [ snowflake_account_role.loader_roles ]
+}
+resource "snowflake_grant_account_role" "transformer_to_sysadmin" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "transformer${each.value.suffix}"
+  parent_role_name = "sysadmin"
+  depends_on       = [ snowflake_account_role.transformer_roles ]
+}
+
+# -- grant functional roles to users
+resource "snowflake_grant_account_role" "loader_to_loader_airflow" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "loader${each.value.suffix}"
+  user_name        = "loader_airflow${each.value.suffix}"
+  depends_on       = [ snowflake_account_role.loader_roles ]
+}
+resource "snowflake_grant_account_role" "transformer_to_transformer_dbt" {
+  provider         = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  role_name        = "transformer${each.value.suffix}"
+  user_name        = "transformer_dbt${each.value.suffix}"
+  depends_on       = [ snowflake_account_role.transformer_roles ]
+}
+
+# -- Warehouse grants
+resource "snowflake_grant_privileges_to_account_role" "loading_wh_usage_to_loader" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "loader${each.value.suffix}"
+  on_account_object {
+    object_type = "WAREHOUSE"
+    object_name = "loading${each.value.suffix}"
+  }
+  depends_on        = [ snowflake_warehouse.edu_loading_warehouses, snowflake_account_role.loader_roles ]
+}
+resource "snowflake_grant_privileges_to_account_role" "transforming_wh_usage_to_transformer" {
+  provider          = snowflake.securityadmin
+  for_each = { for env in var.environments : env.name => env }
+  privileges        = ["USAGE"]
+  account_role_name = "transformer${each.value.suffix}"
+  on_account_object {
+    object_type = "WAREHOUSE"
+    object_name = "transforming${each.value.suffix}"
+  }
+  depends_on        = [ snowflake_warehouse.edu_transforming_warehouses, snowflake_account_role.transformer_roles ]
+}
+
+
+# # How to run arbitrary SQL from Terraform! (hopefully won't need this):
+# resource "snowflake_sql_script" "clone_table_script" {
+#   database = "your_database_name"
+#   schema   = "your_schema_name"
+#   # This SQL statement creates a new table "target_table" with the structure and data of "source_table".
+#   # To clone only the structure (no data), you can use 'CREATE TABLE target_table LIKE source_table' in a SQL statement,
+#   # however 'CLONE' is the preferred Snowflake method for zero-copy operations.
+#   # Note: The snowflake_sql_script resource might have limitations regarding state tracking for CLONE operations.
+#   # A simpler approach is to use the SQL below to only copy structure.
+#   statement = <<-EOF
+#     CREATE OR REPLACE TABLE your_database_name.your_schema_name.target_table
+#     LIKE your_database_name.your_schema_name.source_table;
+#   EOF
+# }

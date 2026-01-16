@@ -1,5 +1,9 @@
-# Local .terraform directories
+######## THIS FILE ENSURES YOUR TF STATE FILES DON'T WIND UP IN SOURCE CONTROL!!!
+
+# Local .terraform directories and files
 **/.terraform/*
+*/.terraform
+.terraform.lock.hcl
 
 # .tfstate files
 *.tfstate
