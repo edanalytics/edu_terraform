@@ -23,3 +23,6 @@ variable environments {
 variable workspace_id {
     type = string
 }
+variable storage_location {
+    type = string
+}

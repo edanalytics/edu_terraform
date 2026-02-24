@@ -37,11 +37,27 @@ Copy-modify the code in `examples/snowflake/`.
 
 
 ## Databricks configuration
-Coming soon!
 
+### Credential setup
+Set up a `~.databrickscfg` file with
+```bash
+# This file contains Databricks credentials.
+
+[DEFAULT]
+host  = <databricks workspace host>
+token = <personal access token>
+[ACCOUNT]
+host = https://accounts.azuredatabricks.net
+account_id = <databricks account id>
+client_id = <service principal client id>
+client_secret = <service principal client secret>
+```
+
+### Code setup
+Copy-modify the code in `examples/databricks/`. Add required variables `warehouse_id` and `metastore_storage_location` to your `config.tfvars`.
 
 
 ## Playbooks
 In addition to the default setup that comes with the modules, we also provide some "playbooks" which are optional snippets of TF code you can copy into your project to achieve a specific objective or support some functionality. See the following `playbooks/`:
-* [limit access to your Snowflake account from specific IP address ranges](playbooks/snowflake-network-policy.tf)
+* limit access to your [Snowflake](playbooks/snowflake-network-policy.tf) or [Databricks](playbooks/databricks-network-policy.tf) account from specific IP address ranges
 * ...

@@ -19,7 +19,7 @@ output transforming_warehouses {
     value = databricks_sql_endpoint.edu_transforming_warehouses
 }
 output district_analyst_warehouse {
-    value = databricks_sql_endpoint.edu_district_analyst_warehouse
+    value = databricks_sql_endpoint.edu_district_ad_hoc_warehouse
 }
 output raw_r_roles {
     value = databricks_group.raw_r_roles

@@ -1,15 +1,3 @@
-terraform {
-  required_providers {
-    databricks = {
-      source = "databricks/databricks"
-      version = "1.85.0"
-      configuration_aliases = [ databricks.workspace ]
-    }
-  }
-}
-
-
-
 # -----------------------------------------------------------------------------
 # Catalogs
 resource databricks_catalog edu_raw_catalogs {
@@ -27,7 +15,6 @@ resource databricks_catalog edu_analytics_catalogs {
   comment      = "Analytics data (${each.value.name} environment)"
   storage_root = var.storage_location
 }
-
 
 
 # -----------------------------------------------------------------------------
@@ -49,7 +36,6 @@ resource databricks_schema edu_raw_util_schemas {
   comment      = "Raw schema for holding stages (${each.value.name} environment)"
   depends_on   = [ databricks_catalog.edu_raw_catalogs ]
 }
-
 
 
 # -----------------------------------------------------------------------------
@@ -152,7 +138,6 @@ resource databricks_sql_table edu_meta_change_version_tables {
 }
 
 
-
 # -----------------------------------------------------------------------------
 # Warehouses
 resource databricks_sql_endpoint edu_loading_warehouses {
@@ -170,23 +155,22 @@ resource databricks_sql_endpoint edu_transforming_warehouses {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   name             = "transforming_${each.value.name}"
-  cluster_size     = "Medium"
+  cluster_size     = "Small"
   min_num_clusters = 1
   max_num_clusters = 1
   auto_stop_mins   = 10
   enable_serverless_compute = true
 }
 
-resource databricks_sql_endpoint edu_district_analyst_warehouse {
+resource databricks_sql_endpoint edu_district_ad_hoc_warehouse {
   provider = databricks.workspace
-  name             = "district_analyst"
+  name             = "district_ad_hoc"
   cluster_size     = "X-Small"
   min_num_clusters = 1
   max_num_clusters = 1
   auto_stop_mins   = 10
   enable_serverless_compute = true
 }
-
 
 
 # -----------------------------------------------------------------------------
@@ -254,7 +238,6 @@ resource databricks_group sysadmin_role {
 }
 
 
-
 # -----------------------------------------------------------------------------
 # Service Principals
 resource databricks_service_principal edu_airflow_users {
@@ -272,7 +255,6 @@ resource databricks_service_principal edu_dbt_users {
   databricks_sql_access = true
   workspace_access      = true
 }
-
 
 
 # -----------------------------------------------------------------------------
@@ -316,7 +298,6 @@ resource databricks_grant all_on_analytics_to_db_analytics_rw {
   privileges = [ "ALL PRIVILEGES" ]
   depends_on = [ databricks_catalog.edu_analytics_catalogs, databricks_group.analytics_rw_roles ]
 }
-
 
 
 # -----------------------------------------------------------------------------
@@ -381,7 +362,6 @@ resource databricks_group_member transformer_to_sysadmin {
 }
 
 
-
 # -----------------------------------------------------------------------------
 # Service principal group memberships (grant functional roles to users)
 resource databricks_group_member loader_to_loader_airflow {
@@ -399,7 +379,6 @@ resource databricks_group_member transformer_to_transformer_dbt {
   member_id  = databricks_service_principal.edu_dbt_users["transformer_dbt${each.value.suffix}"].id
   depends_on = [ databricks_group.transformer_roles, databricks_service_principal.edu_dbt_users ]
 }
-
 
 
 # -----------------------------------------------------------------------------
@@ -439,17 +418,16 @@ resource databricks_mws_permission_assignment sysadmin_workspace_access {
 }
 
 
-
 # -----------------------------------------------------------------------------
 # Warehouse usage grants
 resource databricks_permissions wh_usage_to_district_analyst {
   provider = databricks.workspace
-  sql_endpoint_id = databricks_sql_endpoint.edu_district_analyst_warehouse.id
+  sql_endpoint_id = databricks_sql_endpoint.edu_district_ad_hoc_warehouse.id
   access_control {
     group_name       = "district_analyst"
     permission_level = "CAN_USE"
   }
-  depends_on = [ databricks_sql_endpoint.edu_district_analyst_warehouse, databricks_group.district_analyst_role ]
+  depends_on = [ databricks_sql_endpoint.edu_district_ad_hoc_warehouse, databricks_group.district_analyst_role ]
 }
 
 resource databricks_permissions loading_wh_usage_to_loader {
