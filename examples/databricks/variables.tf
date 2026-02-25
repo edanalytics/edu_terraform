@@ -1,4 +1,7 @@
-variable databricks_profile {
+variable workspace_id {
+    type = string
+}
+variable storage_location {
     type = string
 }
 variable environments {
@@ -19,10 +22,4 @@ variable environments {
             suffix = "_dev"
         }
     ]
-}
-variable workspace_id {
-    type = string
-}
-variable storage_location {
-    type = string
 }

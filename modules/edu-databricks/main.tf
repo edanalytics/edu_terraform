@@ -103,7 +103,7 @@ resource databricks_sql_table edu_descriptors_tables {
 
 resource databricks_sql_table edu_deletes_tables {
   for_each = { for env in var.environments : env.name => env }
-  provider = databricks.sysadmin
+  provider = databricks.workspace
   name       = "_deletes"
   catalog_name = "${each.value.prefix}raw"
   schema_name  = "edfi3"
@@ -121,7 +121,7 @@ resource databricks_sql_table edu_deletes_tables {
 
 resource databricks_sql_table edu_meta_change_version_tables {
   for_each = { for env in var.environments : env.name => env }
-  provider = databricks.sysadmin
+  provider = databricks.workspace
   name       = "_meta_change_versions"
   catalog_name = "${each.value.prefix}raw"
   schema_name  = "edfi3"
@@ -140,7 +140,7 @@ resource databricks_sql_table edu_meta_change_version_tables {
 
 # -----------------------------------------------------------------------------
 # Warehouses
-resource databricks_sql_endpoint edu_loading_warehouses {
+resource databricks_sql_endpoint edu_loading_warehouses { #
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   name             = "loading_${each.value.name}"
@@ -151,7 +151,7 @@ resource databricks_sql_endpoint edu_loading_warehouses {
   enable_serverless_compute = true
 }
 
-resource databricks_sql_endpoint edu_transforming_warehouses {
+resource databricks_sql_endpoint edu_transforming_warehouses { #
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   name             = "transforming_${each.value.name}"
@@ -162,7 +162,7 @@ resource databricks_sql_endpoint edu_transforming_warehouses {
   enable_serverless_compute = true
 }
 
-resource databricks_sql_endpoint edu_district_ad_hoc_warehouse {
+resource databricks_sql_endpoint edu_district_ad_hoc_warehouse { #
   provider = databricks.workspace
   name             = "district_ad_hoc"
   cluster_size     = "X-Small"
@@ -240,7 +240,7 @@ resource databricks_group sysadmin_role {
 
 # -----------------------------------------------------------------------------
 # Service Principals
-resource databricks_service_principal edu_airflow_users {
+resource databricks_service_principal edu_airflow_users { #
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
   display_name          = "loader_airflow_${each.value.name}"
@@ -248,7 +248,7 @@ resource databricks_service_principal edu_airflow_users {
   workspace_access      = true
 }
 
-resource databricks_service_principal edu_dbt_users {
+resource databricks_service_principal edu_dbt_users { #
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
   display_name          = "transformer_dbt_${each.value.name}"
@@ -260,7 +260,7 @@ resource databricks_service_principal edu_dbt_users {
 # -----------------------------------------------------------------------------
 # Grants (privileges to role)
 # grant usage on database raw to role db_raw_r;
-resource databricks_grant usage_on_raw_to_db_raw_r {
+resource databricks_grant usage_on_raw_to_db_raw_r { 
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   catalog    = "${each.value.prefix}raw"
@@ -270,7 +270,7 @@ resource databricks_grant usage_on_raw_to_db_raw_r {
 }
 
 # grant all on database raw to role db_raw_rw;
-resource databricks_grant all_on_raw_to_db_raw_rw {
+resource databricks_grant all_on_raw_to_db_raw_rw { 
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   catalog    = "${each.value.prefix}raw"
@@ -280,7 +280,7 @@ resource databricks_grant all_on_raw_to_db_raw_rw {
 }
 
 # grant usage on database analytics to role db_analytics_r;
-resource databricks_grant usage_on_analytics_to_db_analytics_r {
+resource databricks_grant usage_on_analytics_to_db_analytics_r { 
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   catalog    = "${each.value.prefix}analytics"
@@ -290,7 +290,7 @@ resource databricks_grant usage_on_analytics_to_db_analytics_r {
 }
 
 # grant all on database analytics to role db_analytics_rw;
-resource databricks_grant all_on_analytics_to_db_analytics_rw {
+resource databricks_grant all_on_analytics_to_db_analytics_rw { 
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
   catalog    = "${each.value.prefix}analytics"
@@ -306,8 +306,8 @@ resource databricks_grant all_on_analytics_to_db_analytics_rw {
 resource databricks_group_member db_raw_rw_to_loader {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.raw_rw_roles["db_${each.value.prefix}raw_rw"].id
-  member_id  = databricks_group.loader_roles["loader${each.value.suffix}"].id
+  group_id   = databricks_group.raw_rw_roles[each.value.name].id
+  member_id  = databricks_group.loader_roles[each.value.name].id
   depends_on = [ databricks_group.raw_rw_roles, databricks_group.loader_roles ]
 }
 
@@ -315,32 +315,32 @@ resource databricks_group_member db_raw_rw_to_loader {
 resource databricks_group_member db_raw_r_to_transformer {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.raw_r_roles["db_${each.value.prefix}raw_r"].id
-  member_id  = databricks_group.transformer_roles["transformer${each.value.suffix}"].id
+  group_id   = databricks_group.raw_r_roles[each.value.name].id
+  member_id  = databricks_group.transformer_roles[each.value.name].id
   depends_on = [ databricks_group.raw_r_roles, databricks_group.transformer_roles ]
 }
 
 resource databricks_group_member db_analytics_rw_to_transformer {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.analytics_rw_roles["db_${each.value.prefix}analytics_rw"].id
-  member_id  = databricks_group.transformer_roles["transformer${each.value.suffix}"].id
+  group_id   = databricks_group.analytics_rw_roles[each.value.name].id
+  member_id  = databricks_group.transformer_roles[each.value.name].id
   depends_on = [ databricks_group.analytics_rw_roles, databricks_group.transformer_roles ]
 }
 
 # -- note: transformer_dev can read from prod raw data, but can't write to prod analytics
 resource databricks_group_member db_raw_r_to_transformer_dev {
   provider = databricks.account
-  group_id   = databricks_group.raw_r_roles["db_raw_r"].id
-  member_id  = databricks_group.transformer_roles["transformer_dev"].id
+  group_id   = databricks_group.raw_r_roles["prod"].id
+  member_id  = databricks_group.transformer_roles["dev"].id
   depends_on = [ databricks_group.raw_r_roles, databricks_group.transformer_roles ]
 }
 
 # grant role db_analytics_r to role district_analyst (_only_ prod, not dev/test/other env schemas)
 resource databricks_group_member db_analytics_r_to_district_analyst {
   provider = databricks.account
-  group_id   = databricks_group.analytics_r_roles["db_analytics_r"].id
-  member_id  = databricks_group.district_analyst_role["district_analyst"].id
+  group_id   = databricks_group.analytics_r_roles["prod"].id
+  member_id  = databricks_group.district_analyst_role.id
   depends_on = [ databricks_group.analytics_r_roles, databricks_group.district_analyst_role ]
 }
 
@@ -348,7 +348,7 @@ resource databricks_group_member db_analytics_r_to_district_analyst {
 resource databricks_group_member loader_to_sysadmin {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.loader_roles["loader${each.value.suffix}"].id
+  group_id   = databricks_group.loader_roles[each.value.name].id
   member_id  = databricks_group.sysadmin_role.id
   depends_on = [ databricks_group.loader_roles, databricks_group.sysadmin_role ]
 }
@@ -356,7 +356,7 @@ resource databricks_group_member loader_to_sysadmin {
 resource databricks_group_member transformer_to_sysadmin {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.transformer_roles["transformer${each.value.suffix}"].id
+  group_id   = databricks_group.transformer_roles[each.value.name].id
   member_id  = databricks_group.sysadmin_role.id
   depends_on = [ databricks_group.transformer_roles, databricks_group.sysadmin_role ]
 }
@@ -367,16 +367,16 @@ resource databricks_group_member transformer_to_sysadmin {
 resource databricks_group_member loader_to_loader_airflow {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.loader_roles["loader${each.value.suffix}"].id
-  member_id  = databricks_service_principal.edu_airflow_users["loader_airflow${each.value.suffix}"].id
+  group_id   = databricks_group.loader_roles[each.value.name].id
+  member_id  = databricks_service_principal.edu_airflow_users[each.value.name].id
   depends_on = [ databricks_group.loader_roles, databricks_service_principal.edu_airflow_users ]
 }
 
 resource databricks_group_member transformer_to_transformer_dbt {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  group_id   = databricks_group.transformer_roles["transformer${each.value.suffix}"].id
-  member_id  = databricks_service_principal.edu_dbt_users["transformer_dbt${each.value.suffix}"].id
+  group_id   = databricks_group.transformer_roles[each.value.name].id
+  member_id  = databricks_service_principal.edu_dbt_users[each.value.name].id
   depends_on = [ databricks_group.transformer_roles, databricks_service_principal.edu_dbt_users ]
 }
 
@@ -420,7 +420,7 @@ resource databricks_mws_permission_assignment sysadmin_workspace_access {
 
 # -----------------------------------------------------------------------------
 # Warehouse usage grants
-resource databricks_permissions wh_usage_to_district_analyst {
+resource databricks_permissions wh_usage_to_district_analyst { #
   provider = databricks.workspace
   sql_endpoint_id = databricks_sql_endpoint.edu_district_ad_hoc_warehouse.id
   access_control {
@@ -433,7 +433,7 @@ resource databricks_permissions wh_usage_to_district_analyst {
 resource databricks_permissions loading_wh_usage_to_loader {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
-  sql_endpoint_id = databricks_sql_endpoint.edu_loading_warehouses["loading${each.value.suffix}"].id
+  sql_endpoint_id = databricks_sql_endpoint.edu_loading_warehouses[each.value.name].id
   access_control {
     group_name       = "loader${each.value.suffix}"
     permission_level = "CAN_USE"
@@ -444,7 +444,7 @@ resource databricks_permissions loading_wh_usage_to_loader {
 resource databricks_permissions transforming_wh_usage_to_transformer {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.workspace
-  sql_endpoint_id = databricks_sql_endpoint.edu_transforming_warehouses["transforming${each.value.suffix}"].id
+  sql_endpoint_id = databricks_sql_endpoint.edu_transforming_warehouses[each.value.name].id
   access_control {
     group_name       = "transformer${each.value.suffix}"
     permission_level = "CAN_USE"

@@ -54,7 +54,7 @@ client_secret = <service principal client secret>
 ```
 
 ### Code setup
-Copy-modify the code in `examples/databricks/`. Add required variables `warehouse_id` and `metastore_storage_location` to your `config.tfvars`.
+Copy-modify the code in `examples/databricks/`. Add required variables `warehouse_id` and `storage_location` to your `config.tfvars`.
 
 
 ## Playbooks

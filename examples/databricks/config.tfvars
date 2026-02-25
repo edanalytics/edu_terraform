@@ -1,4 +1,3 @@
-workspace_idsnowflake_profile = "profile_identifier" # (from Credential Setup documentation)
 
 workspace_id = "workspace_id"
 storage_location = "metastore_storage_location"

@@ -1,6 +1,3 @@
-variable databricks_profile {
-    type = string
-}
 variable environments {
     type = list(object({
         name = string
@@ -11,7 +8,7 @@ variable environments {
         {
             name = "prod"
             prefix = ""
-            suffix = ""
+            suffix = "_prod"
         },
         {
             name = "dev"
