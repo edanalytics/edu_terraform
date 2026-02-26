@@ -72,6 +72,7 @@ resource databricks_sql_table edu_template_tables {
   catalog_name = "${each.value.prefix}raw"
   schema_name  = "edfi3"
   table_type   = "MANAGED"
+  warehouse_id = databricks_sql_endpoint.edu_loading_warehouses["${each.value.name}"].id
   depends_on   = [ databricks_sql_endpoint.edu_loading_warehouses, databricks_schema.edu_raw_edfi3_schemas ]
 
   dynamic "column" {
@@ -90,6 +91,7 @@ resource databricks_sql_table edu_descriptors_tables {
   catalog_name = "${each.value.prefix}raw"
   schema_name  = "edfi3"
   table_type   = "MANAGED"
+  warehouse_id = databricks_sql_endpoint.edu_loading_warehouses["${each.value.name}"].id
   depends_on   = [ databricks_sql_endpoint.edu_loading_warehouses, databricks_schema.edu_raw_edfi3_schemas ]
 
   dynamic "column" {
@@ -108,6 +110,7 @@ resource databricks_sql_table edu_deletes_tables {
   catalog_name = "${each.value.prefix}raw"
   schema_name  = "edfi3"
   table_type   = "MANAGED"
+  warehouse_id = databricks_sql_endpoint.edu_loading_warehouses["${each.value.name}"].id
   depends_on   = [ databricks_sql_endpoint.edu_loading_warehouses, databricks_schema.edu_raw_edfi3_schemas ]
 
   dynamic "column" {
@@ -126,6 +129,7 @@ resource databricks_sql_table edu_meta_change_version_tables {
   catalog_name = "${each.value.prefix}raw"
   schema_name  = "edfi3"
   table_type   = "MANAGED"
+  warehouse_id = databricks_sql_endpoint.edu_loading_warehouses["${each.value.name}"].id
   depends_on   = [ databricks_sql_endpoint.edu_loading_warehouses, databricks_schema.edu_raw_edfi3_schemas ]
 
   dynamic "column" {
@@ -210,7 +214,7 @@ resource databricks_group analytics_rw_roles {
 resource databricks_group loader_roles {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  display_name          = "loader_${each.value.name}"
+  display_name          = "loader${each.value.suffix}"
   databricks_sql_access = true
   workspace_access      = true
 }
@@ -218,7 +222,7 @@ resource databricks_group loader_roles {
 resource databricks_group transformer_roles {
   for_each = { for env in var.environments : env.name => env }
   provider = databricks.account
-  display_name          = "transformer_${each.value.name}"
+  display_name          = "transformer${each.value.suffix}"
   databricks_sql_access = true
   workspace_access      = true
 }
