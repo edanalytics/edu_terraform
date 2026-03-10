@@ -28,7 +28,7 @@ module edu_snowflake {
   # grant role db_test_raw_r to role transformer_dev;
   # grant role db_test_raw_r to role ea_read;
 
-  # To create `district_viewer__{tenant_code}` roles and grants, fill out the codes below.
+  # To create `tenant_viewer__{tenant_code}` roles and grants, fill out the codes below.
   # (Soon, this will likely be automated via a DAG that pulls tenant_codes from User Management.)
   # tenant_codes = ["tenant1", "tenant2", "tenant3"]
 }

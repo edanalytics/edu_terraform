@@ -18,8 +18,8 @@ output loading_warehouses {
 output transforming_warehouses {
     value = snowflake_warehouse.edu_transforming_warehouses
 }
-output district_analyst_warehouse {
-    value = snowflake_warehouse.edu_district_analyst_warehouse
+output district_ad_hoc_warehouse {
+    value = snowflake_warehouse.edu_district_ad_hoc_warehouse
 }
 output json_file_formats {
     value = snowflake_file_format.edu_json_file_formats

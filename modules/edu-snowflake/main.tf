@@ -161,12 +161,12 @@ resource snowflake_warehouse edu_transforming_warehouses {
   initially_suspended = true
   statement_timeout_in_seconds = 14400 # 4 hours... is this a good default? should it be configurable?
 }
-resource snowflake_warehouse edu_district_analyst_warehouse {
+resource snowflake_warehouse edu_district_ad_hoc_warehouse {
   provider = snowflake.sysadmin
-  name                = "district_analyst"
+  name                = "district_ad_hoc"
   comment             = "District Analyst Queries"
   warehouse_size      = "small"
-  auto_suspend        = 300
+  auto_suspend        = 60
   auto_resume         = true
   initially_suspended = true
   statement_timeout_in_seconds = 14400 # 4 hours... is this a good default? should it be configurable?
@@ -244,8 +244,9 @@ resource snowflake_account_role transformer_roles {
   comment  = "Functional role: dbt (${each.value.name} environment)"
 }
 resource snowflake_account_role district_analyst_role {
+  for_each = { for env in var.environments : env.name => env }
   provider = snowflake.securityadmin
-  name     = "district_analyst"
+  name     = "${each.value.prefix}district_analyst"
   comment  = "Functional role: District Analysts reading analytics data"
 }
 
@@ -278,23 +279,24 @@ resource snowflake_legacy_service_user edu_dbt_users {
 # Grants (privileges to role)
 
 # grant role db_analytics_r to role district_analyst;
-# (_only_ prod, not dev/test/other env schemas)
 resource "snowflake_grant_account_role" "db_analytics_r_to_district_analyst" {
+  for_each = { for env in var.environments : env.name => env }
   provider         = snowflake.securityadmin
-  role_name        = "db_analytics_r"
-  parent_role_name = "district_analyst"
+  role_name        = "db_${each.value.prefix}analytics_r"
+  parent_role_name = "${each.value.prefix}district_analyst"
   depends_on       = [ snowflake_account_role.district_analyst_role, snowflake_account_role.analytics_r_roles ]
 }
 # grant usage, monitor on warehouse district_analyst to role district_analyst;
 resource "snowflake_grant_privileges_to_account_role" "wh_usage_to_security_manager" {
+  for_each = { for env in var.environments : env.name => env }
   provider          = snowflake.securityadmin
   privileges        = ["USAGE", "MONITOR"]
-  account_role_name = "district_analyst"
+  account_role_name = "${each.value.prefix}district_analyst"
   on_account_object {
     object_type = "WAREHOUSE"
-    object_name = "district_analyst"
+    object_name = "district_ad_hoc"
   }
-  depends_on        = [ snowflake_warehouse.edu_district_analyst_warehouse, snowflake_account_role.district_analyst_role ]
+  depends_on        = [ snowflake_warehouse.edu_district_ad_hoc_warehouse, snowflake_account_role.district_analyst_role ]
 }
 
 # grant usage on database raw to role db_raw_r;

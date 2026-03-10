@@ -1,5 +1,5 @@
 # edu_terraform
-This repo contains Terraform/OpenTofu modules for standing up the cloud infrastructure needed to run [EDU](https://enabledataunion.org/) in various platforms. At the moment we focus on the data infrastructure (databases, schemas, warehouses, users, roles, etc.) in Snowflake and Databricks. In the future, we may also support the network and compute infrastructure in AWS.
+This repo contains Terraform/OpenTofu modules for standing up the cloud infrastructure needed to run [EDU](https://enabledataunion.org/) in various platforms. At the moment we focus on the _data_ infrastructure (databases, schemas, warehouses, users, roles, etc.) in Snowflake and Databricks. In the future, we may also support the network and compute infrastructure in AWS or other clouds.
 
 The code _should_ support both Terraform and OpenTofu. We recommend OpenTofu, as it is fully open-source.
 
