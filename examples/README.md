@@ -1,0 +1,1 @@
+This folder contains example TF projects that _use_ the various `modules/edu-*/`. You may copy-modify them for your own implementation.
