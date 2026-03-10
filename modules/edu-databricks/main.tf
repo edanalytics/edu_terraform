@@ -228,8 +228,9 @@ resource databricks_group transformer_roles {
 }
 
 resource databricks_group district_analyst_role {
+  for_each = { for env in var.environments : env.name => env }  
   provider = databricks.account
-  display_name          = "district_analyst"
+  display_name          = "${each.value.prefix}district_analyst"
   databricks_sql_access = true
   workspace_access      = true
 }
