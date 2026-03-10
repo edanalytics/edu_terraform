@@ -1,5 +1,6 @@
 module edu_snowflake {
-  source = "git::github.com/edanalyics/edu_terraform.git//modules/edu-snowflake?ref=v1.0.0"
+  source = "git::github.com/edanalyics/edu_terraform.git//modules/edu-snowflake?ref=main"
+  # ^ pinning to `main` isn't ideal; once we have stable releases, this should be changed, e.g. `v1.0.0`
   
   snowflake_profile = var.snowflake_profile
 
