@@ -199,7 +199,7 @@ resource snowflake_file_format edu_csv_file_formats {
   schema             = upper("public")
   format_type        = "CSV"
   skip_header        = 1
-  field_optionally_enclosed_by = "\\\""
+  field_optionally_enclosed_by = "\""
   depends_on         = [ snowflake_database.edu_raw_databases ]
 }
 
