@@ -11,7 +11,7 @@ variable environments {
         {
             name = "prod"
             prefix = ""
-            suffix = ""
+            suffix = "_prod"
         },
         {
             name = "dev"
