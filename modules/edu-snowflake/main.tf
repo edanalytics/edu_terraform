@@ -254,7 +254,7 @@ resource snowflake_account_role district_analyst_role {
 
 # -----------------------------------------------------------------------------
 # Users
-resource snowflake_legacy_service_user edu_airflow_users {
+resource snowflake_service_user edu_airflow_users {
   for_each = { for env in var.environments : env.name => env }
   provider = snowflake.securityadmin
   name              = upper("loader_airflow_${each.value.name}")
@@ -264,7 +264,7 @@ resource snowflake_legacy_service_user edu_airflow_users {
   default_role      = upper("loader_${each.value.name}")
   depends_on        = [ snowflake_account_role.loader_roles, snowflake_warehouse.edu_loading_warehouses, snowflake_schema.edu_raw_edfi3_schemas ]
 }
-resource snowflake_legacy_service_user edu_dbt_users {
+resource snowflake_service_user edu_dbt_users {
   for_each = { for env in var.environments : env.name => env }
   provider = snowflake.securityadmin
   name              = upper("transformer_dbt_${each.value.name}")
@@ -645,14 +645,14 @@ resource "snowflake_grant_account_role" "loader_to_loader_airflow" {
   for_each = { for env in var.environments : env.name => env }
   role_name        = upper("loader${each.value.suffix}")
   user_name        = upper("loader_airflow${each.value.suffix}")
-  depends_on       = [ snowflake_account_role.loader_roles, snowflake_legacy_service_user.edu_airflow_users ]
+  depends_on       = [ snowflake_account_role.loader_roles, snowflake_service_user.edu_airflow_users ]
 }
 resource "snowflake_grant_account_role" "transformer_to_transformer_dbt" {
   provider         = snowflake.securityadmin
   for_each = { for env in var.environments : env.name => env }
   role_name        = upper("transformer${each.value.suffix}")
   user_name        = upper("transformer_dbt${each.value.suffix}")
-  depends_on       = [ snowflake_account_role.transformer_roles, snowflake_legacy_service_user.edu_dbt_users ]
+  depends_on       = [ snowflake_account_role.transformer_roles, snowflake_service_user.edu_dbt_users ]
 }
 
 # -- Warehouse grants

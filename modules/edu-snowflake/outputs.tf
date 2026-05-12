@@ -49,8 +49,8 @@ output district_analyst_role {
     value = snowflake_account_role.district_analyst_role
 }
 output airflow_users {
-    value = snowflake_legacy_service_user.edu_airflow_users
+    value = snowflake_service_user.edu_airflow_users
 }
 output dbt_users {
-    value = snowflake_legacy_service_user.edu_dbt_users
+    value = snowflake_service_user.edu_dbt_users
 }
