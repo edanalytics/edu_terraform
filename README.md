@@ -29,6 +29,9 @@ account_name='YOURACCOUNT'
 user='YOU@YOURDOMAIN.COM'
 password='PASSWORD_OR_PAT'
 role='ACCOUNTADMIN'
+authenticator='UsernamePasswordMFA'
+client_request_mfa_token=true
+client_store_temporary_credential=true
 ```
 (The Snowflake user must be `accountadmin`, i.e., able to `use` the roles `sysadmin`, `securityadmin`, and `useradmin`.)
 
