@@ -182,7 +182,7 @@ resource snowflake_file_format edu_json_file_formats {
   name               = upper("json_default")
   database           = upper("${each.value.prefix}raw")
   schema             = upper("public")
-  format_type        = "json"
+  format_type        = upper("json")
   compression        = "auto"
   enable_octal       = false
   allow_duplicate    = false
