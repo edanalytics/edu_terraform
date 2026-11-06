@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022 Education Analytics
+# SPDX-License-Identifier: MPL-2.0
+
 module edu_snowflake {
   source = "git::github.com/edanalyics/edu_terraform.git//modules/edu-snowflake?ref=main"
   # ^ pinning to `main` isn't ideal; once we have stable releases, this should be changed, e.g. `v1.0.0`
