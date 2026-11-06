@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022 Education Analytics
+# SPDX-License-Identifier: MPL-2.0
+
 # returning all the resources created by this module allows other modules to
 # depend_on or import them:
 output raw_catalogs {
