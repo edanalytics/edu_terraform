@@ -266,6 +266,11 @@ resource snowflake_service_user edu_airflow_users {
   default_namespace = upper("${each.value.prefix}raw")
   default_role      = upper("loader_${each.value.name}")
   depends_on        = [ snowflake_account_role.loader_roles, snowflake_warehouse.edu_loading_warehouses, snowflake_schema.edu_raw_edfi3_schemas ]
+
+  # Keys are rotated by the Airflow key-rotation DAG; don't let TF revert them.
+  lifecycle {
+    ignore_changes = [ rsa_public_key, rsa_public_key_2 ]
+  }
 }
 resource snowflake_service_user edu_dbt_users {
   for_each = { for env in var.environments : env.name => env }
@@ -276,6 +281,11 @@ resource snowflake_service_user edu_dbt_users {
   default_namespace = upper("${each.value.prefix}analytics")
   default_role      = upper("transformer_${each.value.name}")
   depends_on        = [ snowflake_account_role.transformer_roles, snowflake_warehouse.edu_transforming_warehouses, snowflake_schema.edu_raw_edfi3_schemas ]
+
+  # Keys are rotated by the Airflow key-rotation DAG; don't let TF revert them.
+  lifecycle {
+    ignore_changes = [ rsa_public_key, rsa_public_key_2 ]
+  }
 }
 
 # -----------------------------------------------------------------------------
