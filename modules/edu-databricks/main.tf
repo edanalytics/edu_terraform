@@ -55,6 +55,7 @@ locals {
     { name = "ods_version",        type = "string" },
     { name = "data_model_version", type = "string" },
     { name = "v",                  type = "variant" },
+    { name = "is_sideloaded",      type = "variant" },
   ]
   mcv_columns = [
     { name = "tenant_code",    type = "string" },
@@ -65,6 +66,7 @@ locals {
     { name = "pull_timestamp", type = "timestamp_ntz" },
     { name = "max_version",    type = "int" },
     { name = "is_active",      type = "boolean" },
+    { name = "is_sideloaded",      type = "variant" },
   ]
 }
 
