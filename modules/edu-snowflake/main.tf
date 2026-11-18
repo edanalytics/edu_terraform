@@ -57,6 +57,7 @@ locals {
     { name = "ods_version",        type = "string" },
     { name = "data_model_version", type = "string" },
     { name = "v",                  type = "variant" },
+    { name = "is_sideloaded", type = "boolean", default = "FALSE" },
   ]
   mcv_columns = [
     { name = "tenant_code",    type = "string" },
@@ -67,6 +68,7 @@ locals {
     { name = "pull_timestamp", type = "timestamp_ntz" },
     { name = "max_version",    type = "int" },
     { name = "is_active",      type = "boolean" },
+    { name = "is_sideloaded", type = "boolean", default = "FALSE" },
   ]
 }
 
@@ -83,6 +85,14 @@ resource snowflake_table edu_template_tables {
     content {
       name     = upper(column.value.name)
       type     = column.value.type
+
+      # Only emit a default block for columns that define one
+      dynamic "default" {
+        for_each = try([column.value.default], [])
+        content {
+          constant = default.value
+        }
+      }
     }
   }
 }
@@ -100,6 +110,14 @@ resource snowflake_table edu_descriptors_tables {
     content {
       name     = upper(column.value.name)
       type     = column.value.type
+
+      # Only emit a default block for columns that define one
+      dynamic "default" {
+        for_each = try([column.value.default], [])
+        content {
+          constant = default.value
+        }
+      }
     }
   }
 }
@@ -117,6 +135,14 @@ resource snowflake_table edu_deletes_tables {
     content {
       name     = upper(column.value.name)
       type     = column.value.type
+
+      # Only emit a default block for columns that define one
+      dynamic "default" {
+        for_each = try([column.value.default], [])
+        content {
+          constant = default.value
+        }
+      }
     }
   }
 }
@@ -134,6 +160,14 @@ resource snowflake_table edu_meta_change_version_tables {
     content {
       name     = upper(column.value.name)
       type     = column.value.type
+
+      # Only emit a default block for columns that define one
+      dynamic "default" {
+        for_each = try([column.value.default], [])
+        content {
+          constant = default.value
+        }
+      }
     }
   }
 }
